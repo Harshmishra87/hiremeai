@@ -22,8 +22,6 @@ export default function Home() {
   const wm = useWindowManager();
 
   const handleBootComplete = () => {
-    console.log("BOOT COMPLETE");
-
     try {
       sessionStorage.setItem("harshos-booted", "1");
     } catch {}
