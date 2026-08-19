@@ -72,8 +72,9 @@ export const APPS = {
   about: { id: "about", title: "About", icon: "🍎", width: 480, height: 380 },
 };
 
-// What actually sits on the desktop. Deliberately minimal — AI Interview
-// lives in the dock (and the terminal), not here, to keep the desktop clean.
+// What actually sits on the desktop. Deliberately minimal, matching exactly
+// what's meant to be there — everything else (Terminal, AI Interview,
+// Gallery) is still reachable via the Dock and Finder.
 export const DESKTOP_ICONS = [
   { id: "resume", label: "Resume.pdf", icon: "📄" },
   { id: "experience", label: "Experience", icon: "💼" },
@@ -81,13 +82,13 @@ export const DESKTOP_ICONS = [
   { id: "education", label: "Education", icon: "🎓" },
   { id: "achievements", label: "Achievements", icon: "🏆" },
   { id: "contact", label: "Contact", icon: "📬" },
-  // { id: "terminal", label: "Terminal", icon: "🖥" },
 ];
 
 // Finder is the full launcher — it still surfaces everything, including the
 // apps intentionally left off the desktop itself.
 export const FINDER_ICONS = [
   ...DESKTOP_ICONS,
+  { id: "terminal", label: "Terminal", icon: "🖥" },
   { id: "interview", label: "AI Interview", icon: "🤖" },
   { id: "gallery", label: "Gallery", icon: "📷" },
 ];

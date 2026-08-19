@@ -27,7 +27,25 @@ export default function Desktop({ onOpenApp, hideOrb }) {
           />
         ))}
       </div>
-
+      <div className="absolute left-[18%] top-1/2 -translate-y-1/2 pointer-events-none">
+        {" "}
+        <h1
+          className="
+      font-display
+      text-white
+      text-6xl
+      md:text-7xl
+      lg:text-8xl
+      font-semibold
+      tracking-[-0.06em]
+      leading-none
+      drop-shadow-[0_0_30px_rgba(255,255,255,0.08)]
+      opacity-90
+    "
+        >
+          Hey, I'm Harsh
+        </h1>
+      </div>
       {/* Floating AI orb — fixed to the viewport so it can never clip outside
           the window. Hidden while the AI Interview sidebar is open, so it
           behaves like a collapsible chat widget: collapse the sidebar to

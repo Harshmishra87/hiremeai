@@ -80,7 +80,11 @@ export default function Home() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden font-body">
-      <Wallpaper />
+      {/* assistantOpen tells Wallpaper when the InterviewSidebar is covering
+          the laptop hotspot region, so it can suppress the laptop's
+          proximity/activation logic entirely while hidden behind the
+          panel — see Wallpaper.jsx for details. */}
+      <Wallpaper assistantOpen={interviewExpanded} />
       {!booted && <BootScreen onComplete={handleBootComplete} />}
       {booted && (
         <>

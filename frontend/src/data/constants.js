@@ -2,10 +2,10 @@ export const CANDIDATE = {
   name: "Harsh Mishra",
   role: "Frontend Developer & AI Builder",
   location: "India",
-  email: "harshhmishra08@gmail.com",
-  phone: "+91 9757124240",
-  github: "https://github.com/Harshmishra87",
-  linkedin: "https://www.linkedin.com/in/harsh-mishra-460328266/",
+  email: "harsh.mishra@example.com",
+  phone: "+91 90000 00000",
+  github: "https://github.com/harshmishra",
+  linkedin: "https://linkedin.com/in/harshmishra",
   resumeUrl: "/resume.pdf",
   tagline: "I build interfaces that feel like products, not prototypes.",
 };
@@ -13,11 +13,12 @@ export const CANDIDATE = {
 export const API_BASE_URL = "http://localhost:8000";
 
 export const BOOT_LINES = [
-  "Starting HarshOS...",
-  "Loading modules...",
-  "Initializing AI Assistant...",
-  "Loading Portfolio...",
-  "Welcome.",
+  "Initializing HarshOS...",
+  "Loading Projects...",
+  "Loading Experience...",
+  "Loading Resume...",
+  "Connecting AI Assistant...",
+  "System Ready.",
 ];
 
 export const QUICK_QUESTIONS = [

@@ -31,11 +31,13 @@ export default function Window({
     <div className="window-titlebar flex items-center gap-2 px-4 py-2.5 border-b border-white/10 cursor-move shrink-0 bg-white/[0.03]">
       <div className="flex items-center gap-2 group">
         <button
+          data-cursor="magnetic"
           onClick={onClose}
           aria-label="Close window"
           className="h-3 w-3 rounded-full bg-[#ff5f57] hover:brightness-90 flex items-center justify-center focus-ring"
         />
         <button
+          data-cursor="magnetic"
           onClick={() =>
             maximized ? onToggleMaximize(posRef.current) : onMinimize()
           }
@@ -43,6 +45,7 @@ export default function Window({
           className="h-3 w-3 rounded-full bg-[#febc2e] hover:brightness-90 focus-ring"
         />
         <button
+          data-cursor="magnetic"
           onClick={() => onToggleMaximize(posRef.current)}
           aria-label={maximized ? "Restore window" : "Maximize window"}
           className="h-3 w-3 rounded-full bg-[#28c840] hover:brightness-90 focus-ring"

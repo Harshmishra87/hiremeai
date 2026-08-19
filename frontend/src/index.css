@@ -23,6 +23,16 @@ body {
   color-scheme: dark;
 }
 
+/* Custom cursor: only hide the system cursor once CustomCursor has actually
+   mounted and confirmed a fine (non-touch) pointer — never on touch devices,
+   and never before mount, so there's no flash of a missing cursor. */
+html.custom-cursor-active,
+html.custom-cursor-active * {
+  cursor: none !important;
+}
+
+/* Guard rail: never let inputs/textareas fall back to a light native
+   background if a utility class fails to apply for any reason. */
 input,
 textarea,
 select {

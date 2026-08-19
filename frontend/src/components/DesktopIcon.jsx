@@ -25,6 +25,7 @@ export default function DesktopIcon({
 
   return (
     <button
+      data-cursor="magnetic"
       onClick={handleClick}
       onKeyDown={(e) => e.key === "Enter" && onOpen()}
       className={`flex flex-col items-center gap-1.5 p-2 rounded-xl select-none transition-colors focus-ring w-[84px]
