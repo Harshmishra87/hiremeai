@@ -11,17 +11,13 @@ export default function BootScreen({ onComplete }) {
   const [exiting, setExiting] = useState(false);
 
   useEffect(() => {
-    if (exiting) return undefined;
+    if (exiting) {
+      const doneTimer = setTimeout(onComplete, EXIT_DURATION_MS);
+      return () => clearTimeout(doneTimer);
+    }
     if (visibleLines >= BOOT_LINES.length) {
       const exitTimer = setTimeout(() => setExiting(true), EXIT_DELAY_MS);
-      const doneTimer = setTimeout(
-        onComplete,
-        EXIT_DELAY_MS + EXIT_DURATION_MS,
-      );
-      return () => {
-        clearTimeout(exitTimer);
-        clearTimeout(doneTimer);
-      };
+      return () => clearTimeout(exitTimer);
     }
     const t = setTimeout(() => setVisibleLines((n) => n + 1), LINE_DELAY_MS);
     return () => clearTimeout(t);
@@ -29,7 +25,6 @@ export default function BootScreen({ onComplete }) {
 
   const handleSkip = () => {
     setExiting(true);
-    setTimeout(onComplete, EXIT_DURATION_MS);
   };
 
   return (

@@ -11,14 +11,23 @@ import { APPS } from "../data/apps";
 import { TOPBAR_HEIGHT, DOCK_CLEARANCE } from "../data/layout";
 
 export default function Home() {
-  const [booted, setBooted] = useState(
-    () => sessionStorage.getItem("harshos-booted") === "1",
-  );
+  const [booted, setBooted] = useState(() => {
+    try {
+      return sessionStorage.getItem("harshos-booted") === "1";
+    } catch {
+      return true;
+    }
+  });
   const [bouncingId, setBouncingId] = useState(null);
   const wm = useWindowManager();
 
   const handleBootComplete = () => {
-    sessionStorage.setItem("harshos-booted", "1");
+    console.log("BOOT COMPLETE");
+
+    try {
+      sessionStorage.setItem("harshos-booted", "1");
+    } catch {}
+
     setBooted(true);
   };
 
