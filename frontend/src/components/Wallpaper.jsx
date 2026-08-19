@@ -9,6 +9,12 @@ const NATURAL_WIDTH = 1024;
 const NATURAL_HEIGHT = 576;
 const OBJECT_POSITION = { x: 0.65, y: 0.5 }; // must match the <img> style below
 
+// Default per-hotspot glow intensity multipliers, applied to raw proximity
+// (0..1) before it's written to core/bloom opacity. Kept per-hotspot (not
+// global) so bumping one hotspot's glow can never affect another's.
+const DEFAULT_CORE_STRENGTH = 0.28;
+const DEFAULT_BLOOM_STRENGTH = 0.16;
+
 const HOTSPOTS = [
   {
     id: "coffee",
@@ -36,6 +42,34 @@ const HOTSPOTS = [
       { xF: 898 / NATURAL_WIDTH, yF: 501 / NATURAL_HEIGHT },
       { xF: 796 / NATURAL_WIDTH, yF: 356 / NATURAL_HEIGHT },
     ],
+    // Unchanged from the original tuning — the screen's glow strength was
+    // already deliberate, so this hotspot keeps the defaults explicitly
+    // rather than inheriting them, to make that intent visible in the code.
+    coreStrength: DEFAULT_CORE_STRENGTH,
+    bloomStrength: DEFAULT_BLOOM_STRENGTH,
+  },
+  {
+    id: "resume",
+    kind: "polygon",
+    // Traced from wallpaper.jpg (1024x576) as a 6-point polygon following
+    // the resume sheet's real edges (it sits at a slight rotation on the
+    // desk, partially tucked under the laptop). Unlike "laptop", this
+    // hotspot has no power-on state — the paper is always visible in the
+    // base image, so proximity only ever drives a light-catching-paper
+    // highlight (see the "glow" prop below), never a reveal.
+    pointsF: [
+      { xF: 624 / NATURAL_WIDTH, yF: 574 / NATURAL_HEIGHT },
+      { xF: 538 / NATURAL_WIDTH, yF: 420 / NATURAL_HEIGHT },
+      { xF: 805 / NATURAL_WIDTH, yF: 268 / NATURAL_HEIGHT },
+      { xF: 828 / NATURAL_WIDTH, yF: 310 / NATURAL_HEIGHT },
+      { xF: 779 / NATURAL_WIDTH, yF: 355 / NATURAL_HEIGHT },
+      { xF: 930 / NATURAL_WIDTH, yF: 574 / NATURAL_HEIGHT },
+    ],
+    // Boosted well above the default — the resume should read as a clear,
+    // noticeably bright highlight on hover, not a subtle wash like the
+    // laptop's ambient screen glow.
+    coreStrength: 0.55,
+    bloomStrength: 0.38,
   },
 ];
 
@@ -122,7 +156,8 @@ function getCoverLayout(containerW, containerH) {
  *   the close button, which sits directly above the laptop's on-screen
  *   position) silently powers the laptop on behind the panel, which then
  *   shows as already-on the moment the panel closes even though no one
- *   ever saw it happen.
+ *   ever saw it happen. This suppression is laptop-specific — the resume
+ *   hotspot has no power-on state and is unaffected by the panel.
  */
 export default function Wallpaper({ assistantOpen = false }) {
   const containerRef = useRef(null);
@@ -134,6 +169,8 @@ export default function Wallpaper({ assistantOpen = false }) {
   // Laptop screen "power on" — flips true the first time the cursor comes
   // close enough, and stays true for the rest of the session (until
   // reload). Plain ref, not state, so it never triggers a re-render.
+  // Scoped to the laptop hotspot only — the resume hotspot has no
+  // equivalent "off" state, so it needs no ref here.
   const laptopOnRef = useRef(false);
   const screenOffRef = useRef(null);
   // Mirrors the assistantOpen prop into a ref so the 60fps mousemove path
@@ -206,6 +243,8 @@ export default function Wallpaper({ assistantOpen = false }) {
               width: Math.max(...xs) - Math.min(...xs),
               height: Math.max(...ys) - Math.min(...ys),
             },
+            coreStrength: h.coreStrength ?? DEFAULT_CORE_STRENGTH,
+            bloomStrength: h.bloomStrength ?? DEFAULT_BLOOM_STRENGTH,
           };
         }
         const left = h.leftF * NATURAL_WIDTH * scale + offsetX;
@@ -270,7 +309,8 @@ export default function Wallpaper({ assistantOpen = false }) {
         // hotspot. Treat proximity as zero and skip the activation check
         // entirely — the cursor passing over/near that screen region
         // (e.g. to reach the panel's close button) must never count as
-        // "approaching the laptop," since nobody can see it happen.
+        // "approaching the laptop," since nobody can see it happen. The
+        // resume hotspot sits outside the panel and is never suppressed.
         const laptopSuppressed = assistantOpenRef.current;
 
         // Laptop proximity is computed first so the ambient spotlight
@@ -324,6 +364,10 @@ export default function Wallpaper({ assistantOpen = false }) {
 
         for (const id of Object.keys(rectsRef.current)) {
           const rect = rectsRef.current[id];
+          // Every polygon hotspot other than "laptop" (currently just
+          // "resume") is driven directly by raw cursor proximity — no
+          // suppression, no one-time activation, no rearm gating. It's a
+          // pure "cursor is near this physical object" signal.
           const proximity =
             rect.kind === "polygon"
               ? id === "laptop"
@@ -335,8 +379,13 @@ export default function Wallpaper({ assistantOpen = false }) {
           const bloom = bloomRefs.current[id];
 
           if (rect.kind === "polygon") {
-            if (core) core.style.opacity = (proximity * 0.28).toFixed(3);
-            if (bloom) bloom.style.opacity = (proximity * 0.16).toFixed(3);
+            // Each hotspot's own coreStrength/bloomStrength (set in
+            // HOTSPOTS above) scales its glow independently — bumping
+            // resume's numbers can never affect laptop's, and vice versa.
+            if (core)
+              core.style.opacity = (proximity * rect.coreStrength).toFixed(3);
+            if (bloom)
+              bloom.style.opacity = (proximity * rect.bloomStrength).toFixed(3);
 
             continue;
           }
@@ -414,28 +463,38 @@ export default function Wallpaper({ assistantOpen = false }) {
           glowing blob covering the desktop. */}
       {layout.map((r) => {
         if (r.kind === "polygon") {
+          // "laptop" is the only hotspot with a power-on/off state — the
+          // screen-off cover and the blue/cyan "device lit from within"
+          // wash are both specific to it. "resume" (and any future
+          // always-visible polygon) instead gets a soft white/cool
+          // highlight, like light catching the paper's surface — no
+          // cover div, since there's nothing to reveal.
+          const isLaptop = r.id === "laptop";
+
           return (
             <div
               key={r.id}
               className="absolute inset-0"
               style={{ clipPath: r.clipPath }}
             >
-              {/* Screen-off cover — hides the baked-in dashboard graphic
-                  until the cursor first approaches. Fades out once,
-                  permanently, via laptopOnRef — never re-appears this
-                  session. */}
-              <div
-                ref={screenOffRef}
-                className="absolute inset-0 bg-void"
-                style={{
-                  opacity: 1,
-                  transition: "opacity 1.4s ease-out",
-                  willChange: "opacity",
-                }}
-              />
-              {/* Directional wash — screen lit from within, not a flat
-                  glow. Confined entirely to the clip-path shape above,
-                  so it can never bleed onto the desk. */}
+              {isLaptop && (
+                <div
+                  ref={screenOffRef}
+                  className="absolute inset-0 bg-void"
+                  style={{
+                    opacity: 1,
+                    transition: "opacity 1.4s ease-out",
+                    willChange: "opacity",
+                  }}
+                />
+              )}
+              {/* Directional wash. For the laptop this is a "screen lit
+                  from within" glow; for the resume it's a brighter light
+                  catching the paper's surface — stronger stops than the
+                  laptop, since its coreStrength/bloomStrength multiplier
+                  is also higher (see HOTSPOTS above). Confined entirely
+                  to the clip-path shape above, so it can never bleed
+                  onto the desk. */}
               <div
                 ref={(el) => {
                   bloomRefs.current[r.id] = el;
@@ -444,12 +503,16 @@ export default function Wallpaper({ assistantOpen = false }) {
                 style={{
                   opacity: 0,
                   willChange: "opacity",
-                  background:
-                    "linear-gradient(135deg, rgba(79,124,255,0.9) 0%, rgba(92,225,230,0.5) 45%, transparent 80%)",
+                  background: isLaptop
+                    ? "linear-gradient(135deg, rgba(79,124,255,0.9) 0%, rgba(92,225,230,0.5) 45%, transparent 80%)"
+                    : "linear-gradient(160deg, rgba(255,255,255,0.98) 0%, rgba(150,195,255,0.55) 55%, transparent 88%)",
                 }}
               />
-              {/* Brighter focal point, biased toward where the dashboard
-                  graphic sits — reads as "screen just became active". */}
+              {/* Brighter focal point. For the laptop, biased toward
+                  where the dashboard graphic sits ("screen just became
+                  active"); for the resume, a stronger centered highlight
+                  ("catching the light") — noticeably brighter than the
+                  laptop's on hover, per coreStrength above. */}
               <div
                 ref={(el) => {
                   coreRefs.current[r.id] = el;
@@ -458,8 +521,9 @@ export default function Wallpaper({ assistantOpen = false }) {
                 style={{
                   opacity: 0,
                   willChange: "opacity",
-                  background:
-                    "radial-gradient(circle at 62% 45%, rgba(92,225,230,0.95) 0%, rgba(92,225,230,0.35) 35%, transparent 65%)",
+                  background: isLaptop
+                    ? "radial-gradient(circle at 62% 45%, rgba(92,225,230,0.95) 0%, rgba(92,225,230,0.35) 35%, transparent 65%)"
+                    : "radial-gradient(circle at 50% 35%, rgba(255,255,255,1) 0%, rgba(190,215,255,0.55) 45%, transparent 78%)",
                 }}
               />
             </div>
