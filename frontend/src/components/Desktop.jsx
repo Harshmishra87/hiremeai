@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot } from "lucide-react";
 import DesktopIcon from "./DesktopIcon.jsx";
+import Onboarding from "./Onboarding.jsx";
 import { DESKTOP_ICONS } from "../data/apps";
 
 // Must stay in sync with the "resume" hotspot's pointsF in Wallpaper.jsx —
@@ -34,10 +35,20 @@ function getCoverLayout(containerW, containerH) {
   return { scale, offsetX, offsetY };
 }
 
-export default function Desktop({ onOpenApp, hideOrb }) {
+export default function Desktop({
+  onOpenApp,
+  hideOrb,
+  onboardingActive = false,
+  onDismissOnboarding,
+}) {
   const [selected, setSelected] = useState(null);
   const containerRef = useRef(null);
   const [resumeClipPath, setResumeClipPath] = useState(null);
+  // Resume's on-screen bounding box (same coordinate space as the clip
+  // path above) — the onboarding spotlight/arrow/tooltip position off of
+  // this rather than the polygon points directly, since a simple rect is
+  // all they need.
+  const [resumeBBox, setResumeBBox] = useState(null);
 
   // Recompute the resume paper's on-screen polygon whenever the viewport
   // resizes, using the same object-fit: cover math Wallpaper.jsx uses, so
@@ -56,6 +67,15 @@ export default function Desktop({ onOpenApp, hideOrb }) {
       setResumeClipPath(
         `polygon(${points.map((p) => `${p.x.toFixed(1)}px ${p.y.toFixed(1)}px`).join(", ")})`,
       );
+
+      const xs = points.map((p) => p.x);
+      const ys = points.map((p) => p.y);
+      setResumeBBox({
+        left: Math.min(...xs),
+        top: Math.min(...ys),
+        width: Math.max(...xs) - Math.min(...xs),
+        height: Math.max(...ys) - Math.min(...ys),
+      });
     };
 
     recompute();
@@ -170,6 +190,16 @@ export default function Desktop({ onOpenApp, hideOrb }) {
           </motion.button>
         )}
       </AnimatePresence>
+
+      {/* First-visit onboarding — spotlight/arrow/tooltip on the resume,
+          quiet pulse on the AI orb. Renders last so it sits on top; see
+          Onboarding.jsx and Home.jsx (state + localStorage) for details. */}
+      <Onboarding
+        active={onboardingActive}
+        bbox={resumeBBox}
+        showOrbHint={onboardingActive && !hideOrb}
+        onDismiss={onDismissOnboarding}
+      />
     </div>
   );
 }

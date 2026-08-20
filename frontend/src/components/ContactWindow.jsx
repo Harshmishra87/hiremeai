@@ -1,4 +1,5 @@
 import { useState } from "react";
+import emailjs from "@emailjs/browser";
 import {
   Mail,
   Phone,
@@ -18,16 +19,47 @@ const LINKS = [
   { icon: MapPin, label: CANDIDATE.location, href: null },
 ];
 
+// EmailJS config — swap these for env vars later if you want to keep them
+// out of the client bundle source, but the public key is safe to expose
+// (it's designed to be used client-side).
+const EMAILJS_SERVICE_ID = "service_vo5birb";
+const EMAILJS_TEMPLATE_ID = "template_5o67has";
+const EMAILJS_PUBLIC_KEY = "mDZ8zLOA-6qLPDale";
+
 export default function ContactWindow() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
-  const [sent, setSent] = useState(false);
+  // "idle" | "sending" | "sent" | "error" — replaces the old boolean `sent`
+  // so the button/UI can distinguish in-flight and failed states too.
+  const [status, setStatus] = useState("idle");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.message) return;
-    setSent(true);
-    setTimeout(() => setSent(false), 3200);
-    setForm({ name: "", email: "", message: "" });
+    if (status === "sending") return;
+
+    setStatus("sending");
+
+    try {
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        {
+          name: form.name,
+          email: form.email,
+          reply_to: form.email,
+          message: form.message,
+        },
+        EMAILJS_PUBLIC_KEY,
+      );
+
+      setStatus("sent");
+      setForm({ name: "", email: "", message: "" });
+      setTimeout(() => setStatus("idle"), 3200);
+    } catch (error) {
+      console.error("EmailJS send failed:", error);
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 3200);
+    }
   };
 
   return (
@@ -88,11 +120,21 @@ export default function ContactWindow() {
         />
         <button
           type="submit"
-          className="w-full flex items-center justify-center gap-2 text-sm font-medium bg-accent-purple hover:bg-accent-violet transition text-white py-2.5 rounded-lg"
+          disabled={status === "sending"}
+          className="w-full flex items-center justify-center gap-2 text-sm font-medium bg-accent-purple hover:bg-accent-violet transition text-white py-2.5 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {sent ? <Check size={15} /> : <Send size={14} />}
-          {sent ? "Message sent" : "Send message"}
+          {status === "sent" ? <Check size={15} /> : <Send size={14} />}
+          {status === "sending"
+            ? "Sending…"
+            : status === "sent"
+              ? "Message sent"
+              : "Send message"}
         </button>
+        {status === "error" && (
+          <p className="text-xs text-red-400 text-center pt-1">
+            Something went wrong — please try again or email me directly.
+          </p>
+        )}
       </form>
     </div>
   );

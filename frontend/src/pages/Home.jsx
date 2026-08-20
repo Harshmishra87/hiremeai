@@ -10,6 +10,11 @@ import { useWindowManager } from "../hooks/useWindowManager.js";
 import { APPS } from "../data/apps";
 import { TOPBAR_HEIGHT, DOCK_CLEARANCE } from "../data/layout";
 
+const ONBOARDING_STORAGE_KEY = "harshos-onboarding-seen";
+// Delay before onboarding appears, so it doesn't compete for attention
+// with the interview sidebar's own auto-open animation right after boot.
+const ONBOARDING_SHOW_DELAY_MS = 1400;
+
 export default function Home() {
   const [booted, setBooted] = useState(() => {
     try {
@@ -19,6 +24,11 @@ export default function Home() {
     }
   });
   const [bouncingId, setBouncingId] = useState(null);
+  // First-visit onboarding (resume spotlight + AI orb hint). Starts false
+  // regardless of history so nothing flashes before the localStorage check
+  // below runs; it's turned on only for visitors who haven't dismissed it
+  // before.
+  const [onboardingActive, setOnboardingActive] = useState(false);
   const wm = useWindowManager();
 
   const handleBootComplete = () => {
@@ -29,8 +39,42 @@ export default function Home() {
     setBooted(true);
   };
 
+  const dismissOnboarding = useCallback(() => {
+    setOnboardingActive(false);
+    try {
+      localStorage.setItem(ONBOARDING_STORAGE_KEY, "1");
+    } catch {}
+  }, []);
+
+  // Show onboarding once per visitor, permanently — gated on localStorage
+  // (unlike the boot screen's sessionStorage flag) since this should guide
+  // first-time visitors specifically, not reappear every new tab/session.
+  useEffect(() => {
+    if (!booted) return undefined;
+    try {
+      if (localStorage.getItem(ONBOARDING_STORAGE_KEY) === "1")
+        return undefined;
+    } catch {
+      return undefined;
+    }
+    const t = setTimeout(
+      () => setOnboardingActive(true),
+      ONBOARDING_SHOW_DELAY_MS,
+    );
+    return () => clearTimeout(t);
+  }, [booted]);
+
   const openApp = useCallback(
     (id) => {
+      // Opening the resume is one of the two ways onboarding is dismissed
+      // (the other is the "Got it" button inside it). Every entry point —
+      // dock, top bar menu, desktop icon, and the resume paper hotspot
+      // itself — already calls openApp("resume"), so hooking it here
+      // covers all of them without touching those components.
+      if (id === "resume" && onboardingActive) {
+        dismissOnboarding();
+      }
+
       // Already open: just focus it — never spawn a duplicate.
       if (wm.isOpen(id)) {
         wm.focusWindow(id);
@@ -53,7 +97,7 @@ export default function Home() {
       setBouncingId(id);
       setTimeout(() => setBouncingId(null), 500);
     },
-    [wm],
+    [wm, onboardingActive, dismissOnboarding],
   );
 
   const handleMenuClick = useCallback(
@@ -96,7 +140,12 @@ export default function Home() {
       {booted && (
         <>
           <TopBar onMenuClick={handleMenuClick} />
-          <Desktop onOpenApp={openApp} hideOrb={interviewExpanded} />
+          <Desktop
+            onOpenApp={openApp}
+            hideOrb={interviewExpanded}
+            onboardingActive={onboardingActive}
+            onDismissOnboarding={dismissOnboarding}
+          />
           <WindowManager
             windows={wm.windows}
             activeId={wm.activeId}
