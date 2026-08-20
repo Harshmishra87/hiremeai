@@ -10,7 +10,7 @@ export const CANDIDATE = {
   tagline: "I build interfaces that feel like products, not prototypes.",
 };
 
-export const API_BASE_URL = "http://localhost:8000";
+export const API_BASE_URL = "https://hireharsh.onrender.com";
 
 export const BOOT_LINES = [
   "Initializing HarshOS...",
