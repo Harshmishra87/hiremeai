@@ -34,22 +34,28 @@ export default function Window({
           data-cursor="magnetic"
           onClick={onClose}
           aria-label="Close window"
-          className="h-3 w-3 rounded-full bg-[#ff5f57] hover:brightness-90 flex items-center justify-center focus-ring"
-        />
+          className="window-control flex h-11 w-11 items-center justify-center rounded-full touch-manipulation focus-ring sm:h-3 sm:w-3"
+        >
+          <span className="h-3 w-3 rounded-full bg-[#ff5f57] hover:brightness-90" />
+        </button>
         <button
           data-cursor="magnetic"
           onClick={() =>
             maximized ? onToggleMaximize(posRef.current) : onMinimize()
           }
           aria-label={maximized ? "Restore window" : "Minimize window"}
-          className="h-3 w-3 rounded-full bg-[#febc2e] hover:brightness-90 focus-ring"
-        />
+          className="window-control flex h-11 w-11 items-center justify-center rounded-full touch-manipulation focus-ring sm:h-3 sm:w-3"
+        >
+          <span className="h-3 w-3 rounded-full bg-[#febc2e] hover:brightness-90" />
+        </button>
         <button
           data-cursor="magnetic"
           onClick={() => onToggleMaximize(posRef.current)}
           aria-label={maximized ? "Restore window" : "Maximize window"}
-          className="h-3 w-3 rounded-full bg-[#28c840] hover:brightness-90 focus-ring"
-        />
+          className="window-control flex h-11 w-11 items-center justify-center rounded-full touch-manipulation focus-ring sm:h-3 sm:w-3"
+        >
+          <span className="h-3 w-3 rounded-full bg-[#28c840] hover:brightness-90" />
+        </button>
       </div>
       <div className="flex-1 text-center text-xs font-medium text-ink-secondary flex items-center justify-center gap-1.5 pr-14">
         {icon && <span>{icon}</span>}
@@ -97,6 +103,7 @@ export default function Window({
             key={`drag-${x}-${y}`}
             nodeRef={nodeRef}
             handle=".window-titlebar"
+            cancel=".window-control"
             defaultPosition={{ x, y }}
             bounds="parent"
             onDrag={(_e, data) => {
