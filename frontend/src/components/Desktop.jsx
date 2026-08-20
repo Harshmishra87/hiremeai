@@ -70,12 +70,13 @@ export default function Desktop({
 
       const xs = points.map((p) => p.x);
       const ys = points.map((p) => p.y);
-      setResumeBBox({
+      const bbox = {
         left: Math.min(...xs),
         top: Math.min(...ys),
         width: Math.max(...xs) - Math.min(...xs),
         height: Math.max(...ys) - Math.min(...ys),
-      });
+      };
+      setResumeBBox(bbox);
     };
 
     recompute();

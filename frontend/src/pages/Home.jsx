@@ -29,6 +29,19 @@ export default function Home() {
   // below runs; it's turned on only for visitors who haven't dismissed it
   // before.
   const [onboardingActive, setOnboardingActive] = useState(false);
+  // Computed synchronously at mount (unlike onboardingActive, which only
+  // flips on after ONBOARDING_SHOW_DELAY_MS) so the interview auto-open
+  // effect below can know *immediately* whether a first-time visitor is
+  // still waiting on onboarding — otherwise the sidebar could sneak open
+  // during that delay window, covering the resume before onboarding even
+  // has a chance to render.
+  const [onboardingPending, setOnboardingPending] = useState(() => {
+    try {
+      return localStorage.getItem(ONBOARDING_STORAGE_KEY) !== "1";
+    } catch {
+      return false;
+    }
+  });
   const wm = useWindowManager();
 
   const handleBootComplete = () => {
@@ -41,6 +54,7 @@ export default function Home() {
 
   const dismissOnboarding = useCallback(() => {
     setOnboardingActive(false);
+    setOnboardingPending(false);
     try {
       localStorage.setItem(ONBOARDING_STORAGE_KEY, "1");
     } catch {}
@@ -50,19 +64,13 @@ export default function Home() {
   // (unlike the boot screen's sessionStorage flag) since this should guide
   // first-time visitors specifically, not reappear every new tab/session.
   useEffect(() => {
-    if (!booted) return undefined;
-    try {
-      if (localStorage.getItem(ONBOARDING_STORAGE_KEY) === "1")
-        return undefined;
-    } catch {
-      return undefined;
-    }
+    if (!booted || !onboardingPending) return undefined;
     const t = setTimeout(
       () => setOnboardingActive(true),
       ONBOARDING_SHOW_DELAY_MS,
     );
     return () => clearTimeout(t);
-  }, [booted]);
+  }, [booted, onboardingPending]);
 
   const openApp = useCallback(
     (id) => {
@@ -121,13 +129,19 @@ export default function Home() {
   // startup" — it's meant to greet visitors like a chat widget. Every other
   // app still opens strictly on demand. openApp already guards against
   // duplicates, so this can never spawn a second instance.
+  //
+  // Gated on !onboardingPending: for a first-time visitor, onboarding's
+  // resume spotlight is the primary CTA and must get the screen first —
+  // the sidebar would otherwise cover the resume before onboarding even
+  // renders. Returning visitors (onboardingPending already false) see no
+  // change: the sidebar still auto-opens immediately, exactly as before.
   useEffect(() => {
-    if (booted && !wm.isOpen("interview")) {
+    if (booted && !wm.isOpen("interview") && !onboardingPending) {
       const t = setTimeout(() => openApp("interview"), 500);
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [booted]);
+  }, [booted, onboardingPending]);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden font-body">
