@@ -26,7 +26,13 @@ function ContentFallback() {
   );
 }
 
-export default function WindowManager({ windows, activeId, wm, onOpenApp }) {
+export default function WindowManager({
+  windows,
+  activeId,
+  wm,
+  onOpenApp,
+  windowGeometry,
+}) {
   return (
     <>
       {Object.values(windows).map((w) => {
@@ -45,12 +51,16 @@ export default function WindowManager({ windows, activeId, wm, onOpenApp }) {
             z={w.z}
             width={meta.width}
             height={meta.height}
+            windowGeometry={windowGeometry}
             minimized={w.minimized}
             maximized={w.maximized}
             isActive={activeId === w.id}
             onClose={() => wm.closeWindow(w.id)}
             onMinimize={() => wm.minimizeWindow(w.id)}
             onToggleMaximize={(livePos) => wm.toggleMaximize(w.id, livePos)}
+            onPositionChange={(position) =>
+              wm.updateWindowPosition(w.id, position)
+            }
             onFocus={() => wm.focusWindow(w.id)}
           >
             <Suspense fallback={<ContentFallback />}>

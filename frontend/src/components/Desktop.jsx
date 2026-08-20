@@ -99,6 +99,7 @@ export default function Desktop({
           <DesktopIcon
             key={icon.id}
             icon={icon.icon}
+            asset={icon.asset}
             label={icon.label}
             selected={selected === icon.id}
             onSelect={() => setSelected(icon.id)}

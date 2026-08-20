@@ -22,7 +22,10 @@ export default function TopBar({ onMenuClick }) {
   });
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 h-9 px-4 flex items-center justify-between glass-panel border-b border-white/10 text-sm text-ink-primary select-none">
+    <div
+      data-window-header
+      className="fixed top-0 left-0 right-0 z-50 h-9 px-4 flex items-center justify-between glass-panel border-b border-white/10 text-sm text-ink-primary select-none"
+    >
       <div className="flex items-center gap-5">
         <button
           className="font-display font-semibold tracking-tight hover:opacity-80 transition focus-ring rounded"

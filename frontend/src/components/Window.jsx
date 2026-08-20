@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import Draggable from "react-draggable";
 import { motion, AnimatePresence } from "framer-motion";
-import { TOPBAR_HEIGHT, DOCK_CLEARANCE } from "../data/layout";
+import { DOCK_CLEARANCE, TOPBAR_HEIGHT } from "../data/layout";
 
 export default function Window({
   id,
@@ -19,13 +19,31 @@ export default function Window({
   onMinimize,
   onToggleMaximize,
   onFocus,
+  onPositionChange,
+  windowGeometry = {
+    headerHeight: TOPBAR_HEIGHT,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+  },
   children,
 }) {
   const nodeRef = useRef(null);
+  const Icon = icon;
   // Tracks the window's live on-screen position without lifting it into
   // React state on every drag tick — cheap, and lets maximize/restore
   // capture the exact spot the user last dragged the window to.
   const posRef = useRef({ x, y });
+  const renderedWidth = Math.min(width, windowGeometry.viewportWidth * 0.96);
+  const renderedHeight = Math.min(height, windowGeometry.viewportHeight * 0.88);
+  const dragBounds = {
+    left: 0,
+    top: windowGeometry.headerHeight,
+    right: Math.max(0, windowGeometry.viewportWidth - renderedWidth),
+    bottom: Math.max(
+      windowGeometry.headerHeight,
+      windowGeometry.viewportHeight - DOCK_CLEARANCE - renderedHeight,
+    ),
+  };
 
   const titlebar = (
     <div className="window-titlebar flex items-center gap-2 px-4 py-2.5 border-b border-white/10 cursor-move shrink-0 bg-white/[0.03]">
@@ -58,7 +76,14 @@ export default function Window({
         </button>
       </div>
       <div className="flex-1 text-center text-xs font-medium text-ink-secondary flex items-center justify-center gap-1.5 pr-14">
-        {icon && <span>{icon}</span>}
+        {Icon && (
+          <Icon
+            size={16}
+            weight="duotone"
+            className="text-accent-cyan"
+            aria-hidden="true"
+          />
+        )}
         <span>{title}</span>
       </div>
     </div>
@@ -77,7 +102,7 @@ export default function Window({
             onMouseDown={onFocus}
             style={{
               position: "fixed",
-              top: TOPBAR_HEIGHT + 8,
+              top: windowGeometry.headerHeight + 8,
               left: 16,
               right: 16,
               bottom: DOCK_CLEARANCE + 8,
@@ -95,22 +120,19 @@ export default function Window({
             </div>
           </motion.div>
         ) : (
-          // Keying on the window's authoritative x/y makes Draggable remount
-          // (and re-read defaultPosition) only when the parent explicitly
-          // moves the window — e.g. restoring from maximize — never mid-drag,
-          // since ordinary dragging is handled entirely inside react-draggable.
           <Draggable
-            key={`drag-${x}-${y}`}
             nodeRef={nodeRef}
             handle=".window-titlebar"
             cancel=".window-control"
-            defaultPosition={{ x, y }}
-            bounds="parent"
+            position={{ x, y }}
+            bounds={dragBounds}
             onDrag={(_e, data) => {
               posRef.current = { x: data.x, y: data.y };
+              onPositionChange?.(posRef.current);
             }}
             onStop={(_e, data) => {
               posRef.current = { x: data.x, y: data.y };
+              onPositionChange?.(posRef.current);
             }}
           >
             <div

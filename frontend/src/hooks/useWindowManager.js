@@ -1,4 +1,6 @@
 import { useCallback, useState } from "react";
+import { APPS } from "../data/apps";
+import { DOCK_CLEARANCE } from "../data/layout";
 
 let zCounter = 10;
 
@@ -69,6 +71,64 @@ export function useWindowManager() {
     setActiveId((prev) => (prev === id ? null : prev));
   }, []);
 
+  const restoreWindow = useCallback((id) => {
+    zCounter += 1;
+    setWindows((prev) =>
+      prev[id]
+        ? { ...prev, [id]: { ...prev[id], minimized: false, z: zCounter } }
+        : prev,
+    );
+    setActiveId(id);
+  }, []);
+
+  const updateWindowPosition = useCallback((id, position) => {
+    setWindows((prev) =>
+      prev[id] && !prev[id].maximized
+        ? { ...prev, [id]: { ...prev[id], x: position.x, y: position.y } }
+        : prev,
+    );
+  }, []);
+
+  const clampWindows = useCallback(
+    ({ headerHeight, viewportWidth, viewportHeight }) => {
+      setWindows((prev) => {
+        let changed = false;
+        const next = Object.fromEntries(
+          Object.entries(prev).map(([id, win]) => {
+            const meta = APPS[id] ?? { width: 600, height: 480 };
+            const width = Math.min(meta.width, viewportWidth * 0.96);
+            const height = Math.min(meta.height, viewportHeight * 0.88);
+            const maxX = Math.max(0, viewportWidth - width);
+            const maxY = Math.max(
+              headerHeight,
+              viewportHeight - DOCK_CLEARANCE - height,
+            );
+            const x = Math.min(Math.max(0, win.x), maxX);
+            const y = Math.min(Math.max(headerHeight, win.y), maxY);
+            const prevX = Math.min(Math.max(0, win.prevX), maxX);
+            const prevY = Math.min(Math.max(headerHeight, win.prevY), maxY);
+
+            if (win.maximized) {
+              if (prevX !== win.prevX || prevY !== win.prevY) {
+                changed = true;
+                return [id, { ...win, prevX, prevY }];
+              }
+              return [id, win];
+            }
+
+            if (x !== win.x || y !== win.y) {
+              changed = true;
+              return [id, { ...win, x, y, prevX: x, prevY: y }];
+            }
+            return [id, win];
+          }),
+        );
+        return changed ? next : prev;
+      });
+    },
+    [],
+  );
+
   /**
    * Toggle maximize/restore. `livePosition` (optional) is the window's
    * actual on-screen position at the moment of the click — captured by the
@@ -119,6 +179,9 @@ export function useWindowManager() {
     closeWindow,
     focusWindow,
     minimizeWindow,
+    restoreWindow,
+    updateWindowPosition,
+    clampWindows,
     toggleMaximize,
     isOpen,
   };

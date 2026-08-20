@@ -11,7 +11,7 @@ export const CANDIDATE = {
 };
 
 export const API_BASE_URL = "https://hireharsh.onrender.com";
-
+// export const API_BASE_URL = "http://127.0.0.1:8000";
 export const BOOT_LINES = [
   "Initializing HarshOS...",
   "Loading Projects...",

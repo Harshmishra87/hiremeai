@@ -24,6 +24,11 @@ export default function Home() {
     }
   });
   const [bouncingId, setBouncingId] = useState(null);
+  const [windowGeometry, setWindowGeometry] = useState(() => ({
+    headerHeight: TOPBAR_HEIGHT,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+  }));
   // First-visit onboarding (resume spotlight + AI orb hint). Starts false
   // regardless of history so nothing flashes before the localStorage check
   // below runs; it's turned on only for visitors who haven't dismissed it
@@ -43,6 +48,29 @@ export default function Home() {
     }
   });
   const wm = useWindowManager();
+
+  useEffect(() => {
+    const updateGeometry = () => {
+      const header = document.querySelector("[data-window-header]");
+      const next = {
+        headerHeight: header?.getBoundingClientRect().height ?? TOPBAR_HEIGHT,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      };
+      setWindowGeometry(next);
+      wm.clampWindows(next);
+    };
+
+    updateGeometry();
+    window.addEventListener("resize", updateGeometry);
+    const header = document.querySelector("[data-window-header]");
+    const ro = header ? new ResizeObserver(updateGeometry) : null;
+    ro?.observe(header);
+    return () => {
+      window.removeEventListener("resize", updateGeometry);
+      ro?.disconnect();
+    };
+  }, [booted, wm.clampWindows]);
 
   const handleBootComplete = () => {
     try {
@@ -91,13 +119,39 @@ export default function Home() {
         const openCount = Object.keys(wm.windows).length;
         const cascade = openCount * 20;
 
-        const workTop = TOPBAR_HEIGHT;
-        const workHeight = window.innerHeight - TOPBAR_HEIGHT - DOCK_CLEARANCE;
-
-        const x = Math.max(16, (window.innerWidth - meta.width) / 2 + cascade);
-        const y = Math.max(
-          workTop + 16,
-          workTop + (workHeight - meta.height) / 2 + cascade,
+        const workTop = windowGeometry.headerHeight;
+        const renderedWidth = Math.min(
+          meta.width,
+          windowGeometry.viewportWidth * 0.96,
+        );
+        const renderedHeight = Math.min(
+          meta.height,
+          windowGeometry.viewportHeight * 0.88,
+        );
+        const maxX = Math.max(0, windowGeometry.viewportWidth - renderedWidth);
+        const maxY = Math.max(
+          workTop,
+          windowGeometry.viewportHeight - DOCK_CLEARANCE - renderedHeight,
+        );
+        const x = Math.min(
+          Math.max(
+            0,
+            (windowGeometry.viewportWidth - renderedWidth) / 2 + cascade,
+          ),
+          maxX,
+        );
+        const y = Math.min(
+          Math.max(
+            workTop + 16,
+            workTop +
+              (windowGeometry.viewportHeight -
+                workTop -
+                DOCK_CLEARANCE -
+                renderedHeight) /
+                2 +
+              cascade,
+          ),
+          maxY,
         );
 
         wm.openWindow(id, { x, y });
@@ -105,7 +159,25 @@ export default function Home() {
       setBouncingId(id);
       setTimeout(() => setBouncingId(null), 500);
     },
-    [wm, onboardingActive, dismissOnboarding],
+    [wm, onboardingActive, dismissOnboarding, windowGeometry.headerHeight],
+  );
+
+  const handleDockClick = useCallback(
+    (id) => {
+      const win = wm.windows[id];
+      if (!win) {
+        openApp(id);
+      } else if (win.minimized) {
+        wm.restoreWindow(id);
+      } else if (wm.activeId === id) {
+        wm.minimizeWindow(id);
+      } else {
+        wm.focusWindow(id);
+      }
+      setBouncingId(id);
+      setTimeout(() => setBouncingId(null), 500);
+    },
+    [wm, openApp],
   );
 
   const handleMenuClick = useCallback(
@@ -165,6 +237,7 @@ export default function Home() {
             activeId={wm.activeId}
             wm={wm}
             onOpenApp={openApp}
+            windowGeometry={windowGeometry}
           />
           <InterviewSidebar
             open={interviewExpanded}
@@ -172,7 +245,7 @@ export default function Home() {
             onClose={() => wm.closeWindow("interview")}
           />
           <Dock
-            onOpen={openApp}
+            onOpen={handleDockClick}
             openIds={Object.keys(wm.windows)}
             bouncingId={bouncingId}
           />

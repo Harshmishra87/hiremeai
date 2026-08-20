@@ -23,11 +23,6 @@ body {
   color-scheme: dark;
 }
 
-html.custom-cursor-active,
-html.custom-cursor-active * {
-  cursor: none !important;
-}
-
 input,
 textarea,
 select {

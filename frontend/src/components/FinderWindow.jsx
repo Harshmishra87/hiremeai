@@ -14,7 +14,12 @@ export default function FinderWindow({ onOpenApp }) {
             onClick={() => onOpenApp?.(icon.id)}
             className="flex flex-col items-center gap-2 p-4 rounded-xl glass-surface hover:bg-white/12 transition"
           >
-            <span className="text-2xl">{icon.icon}</span>
+            <icon.icon
+              size={28}
+              weight="duotone"
+              className="text-accent-cyan"
+              aria-hidden="true"
+            />
             <span className="text-xs text-ink-secondary">{icon.label}</span>
           </button>
         ))}
