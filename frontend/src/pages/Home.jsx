@@ -180,19 +180,6 @@ export default function Home() {
     [wm, openApp],
   );
 
-  const handleMenuClick = useCallback(
-    (id) => {
-      const map = {
-        resume: "resume",
-        projects: "projects",
-        contact: "contact",
-        about: "about",
-      };
-      openApp(map[id] ?? id);
-    },
-    [openApp],
-  );
-
   const interviewWindow = wm.windows.interview;
   const interviewExpanded =
     Boolean(interviewWindow) && !interviewWindow.minimized;
@@ -225,7 +212,7 @@ export default function Home() {
       {!booted && <BootScreen onComplete={handleBootComplete} />}
       {booted && (
         <>
-          <TopBar onMenuClick={handleMenuClick} />
+          <TopBar onAboutClick={() => openApp("about")} />
           <Desktop
             onOpenApp={openApp}
             hideOrb={interviewExpanded}
@@ -246,7 +233,7 @@ export default function Home() {
           />
           <Dock
             onOpen={handleDockClick}
-            openIds={Object.keys(wm.windows)}
+            windows={wm.windows}
             bouncingId={bouncingId}
           />
         </>

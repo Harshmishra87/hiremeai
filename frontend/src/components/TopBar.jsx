@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Wifi, BatteryFull } from "lucide-react";
 
-const MENU_ITEMS = ["About", "Projects", "Contact", "Resume"];
-
-export default function TopBar({ onMenuClick }) {
+export default function TopBar({ onAboutClick }) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -29,21 +27,36 @@ export default function TopBar({ onMenuClick }) {
       <div className="flex items-center gap-5">
         <button
           className="font-display font-semibold tracking-tight hover:opacity-80 transition focus-ring rounded"
-          onClick={() => onMenuClick?.("about")}
+          onClick={() => onAboutClick?.()}
         >
-          🍎 HarshOS
-        </button>
-        <nav className="hidden sm:flex items-center gap-4 text-ink-secondary">
-          {MENU_ITEMS.map((item) => (
-            <button
-              key={item}
-              onClick={() => onMenuClick?.(item.toLowerCase())}
-              className="hover:text-ink-primary transition focus-ring rounded px-1"
+          <span className="inline-flex items-center gap-1.5">
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 20 20"
+              fill="none"
+              aria-hidden="true"
             >
-              {item}
-            </button>
-          ))}
-        </nav>
+              <path
+                d="M4 4v12M16 4v12M4 10h5.5L16 4M9.5 10 16 16"
+                stroke="url(#harshos-mark)"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="4" cy="4" r="1.2" fill="#5ce1e6" />
+              <circle cx="16" cy="4" r="1.2" fill="#b28cff" />
+              <circle cx="16" cy="16" r="1.2" fill="#5ce1e6" />
+              <defs>
+                <linearGradient id="harshos-mark" x1="4" y1="16" x2="16" y2="4">
+                  <stop stopColor="#5ce1e6" />
+                  <stop offset="1" stopColor="#b28cff" />
+                </linearGradient>
+              </defs>
+            </svg>
+            HarshOS
+          </span>
+        </button>
       </div>
 
       <div className="flex items-center gap-3 text-ink-secondary">

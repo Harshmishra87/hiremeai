@@ -1,5 +1,4 @@
 import {
-  AppleLogo,
   Briefcase,
   Envelope,
   FileText,
@@ -10,6 +9,7 @@ import {
   Robot,
   TerminalWindow,
   Trophy,
+  UserCircle,
 } from "@phosphor-icons/react";
 
 export const APPS = {
@@ -86,7 +86,7 @@ export const APPS = {
   about: {
     id: "about",
     title: "About",
-    icon: AppleLogo,
+    icon: UserCircle,
     width: 480,
     height: 380,
   },
