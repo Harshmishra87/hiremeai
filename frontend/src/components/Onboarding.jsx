@@ -2,25 +2,27 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const TOOLTIP_WIDTH = 236;
-const TOOLTIP_ARROW_GAP = 18;
-const ARROW_SIZE = 30;
+const TOOLTIP_TARGET_GAP = 28; // vertical gap between tooltip and its ideal position above the target
 const DEFAULT_TOOLTIP_HEIGHT = 118; // fallback before first measured render
+const SPOTLIGHT_PADDING = 22; // how far the glow rect extends past the resume's real edges
 
-// Purely presentational first-visit guide: a soft spotlight + one small
-// arrow + a glass tooltip pointing at the resume, plus an optional quiet
-// pulse on the AI orb. Takes plain data in, knows nothing about app/window
-// state — Home.jsx owns the "should this be visible" and "mark as seen"
-// logic; this component just draws it.
+// Purely presentational first-visit guide: a spotlight around the resume,
+// a line pointing from the tooltip to it, a glass tooltip, and an optional
+// quiet pulse on the AI orb. Takes plain data in, knows nothing about
+// app/window state — Home.jsx owns visibility + "mark as seen"; this
+// component just draws it.
 export default function Onboarding({ active, bbox, showOrbHint, onDismiss }) {
   const [viewport, setViewport] = useState({
     width: typeof window !== "undefined" ? window.innerWidth : 1280,
     height: typeof window !== "undefined" ? window.innerHeight : 800,
   });
   const tooltipRef = useRef(null);
-  // Measured actual tooltip height, so the arrow's angle is computed from
-  // its real bottom edge rather than a guessed constant — keeps the arrow
-  // visually attached to the tooltip regardless of font rendering/zoom.
-  const [tooltipHeight, setTooltipHeight] = useState(DEFAULT_TOOLTIP_HEIGHT);
+  // Measured actual tooltip size, so the connecting line starts from its
+  // real edge rather than a guessed constant.
+  const [tooltipSize, setTooltipSize] = useState({
+    width: TOOLTIP_WIDTH,
+    height: DEFAULT_TOOLTIP_HEIGHT,
+  });
 
   useEffect(() => {
     const onResize = () =>
@@ -31,43 +33,54 @@ export default function Onboarding({ active, bbox, showOrbHint, onDismiss }) {
 
   useLayoutEffect(() => {
     if (tooltipRef.current) {
-      setTooltipHeight(tooltipRef.current.getBoundingClientRect().height);
+      const r = tooltipRef.current.getBoundingClientRect();
+      setTooltipSize({ width: r.width, height: r.height });
     }
   }, [active, bbox]);
 
   if (!bbox) return null;
 
-  // The point we're actually guiding the visitor's eye to — center of the
-  // resume's on-screen bounding box.
+  // Center of the resume's actual on-screen bounding box — the one true
+  // target everything else (line, spotlight) is drawn relative to.
   const targetX = bbox.left + bbox.width / 2;
   const targetY = bbox.top + bbox.height / 2;
 
-  // Tooltip is centered on the resume horizontally, sits just above it,
-  // then gets clamped to stay fully inside the viewport. Clamping is what
-  // can push it off-center — the arrow below corrects for that by aiming
-  // at the real target instead of assuming straight-down.
-  const idealLeft = targetX - TOOLTIP_WIDTH / 2;
+  // Tooltip: centered above the target when there's room; if the resume
+  // sits too high on screen for that, it drops below instead. Horizontal
+  // position is clamped to stay fully on screen — the connecting line
+  // (below) is what keeps it visually linked to the target even when
+  // clamping shifts it off-center.
+  const idealLeft = targetX - tooltipSize.width / 2;
   const tooltipLeft = Math.min(
     Math.max(16, idealLeft),
-    viewport.width - TOOLTIP_WIDTH - 16,
+    viewport.width - tooltipSize.width - 16,
   );
-  const idealTop = bbox.top - tooltipHeight - TOOLTIP_ARROW_GAP - ARROW_SIZE;
-  const tooltipTop = Math.max(64, idealTop);
 
-  const tooltipBottomX = tooltipLeft + TOOLTIP_WIDTH / 2;
-  const tooltipBottomY = tooltipTop + tooltipHeight;
+  const spaceAbove = bbox.top - 64;
+  const placeAbove = spaceAbove > tooltipSize.height + TOOLTIP_TARGET_GAP;
+  const tooltipTop = placeAbove
+    ? bbox.top - tooltipSize.height - TOOLTIP_TARGET_GAP
+    : Math.min(
+        bbox.top + bbox.height + TOOLTIP_TARGET_GAP,
+        viewport.height - tooltipSize.height - 24,
+      );
 
-  // Real angle from the tooltip's bottom edge to the resume's center —
-  // this is what keeps the arrow visually connected to both endpoints
-  // instead of just hanging at a fixed offset.
-  const angleRad = Math.atan2(
-    targetY - tooltipBottomY,
-    targetX - tooltipBottomX,
+  // Anchor point on the tooltip's edge closest to the target — the line
+  // starts here, so it always reads as "coming from the tooltip."
+  const anchorX = Math.min(
+    Math.max(targetX, tooltipLeft + 24),
+    tooltipLeft + tooltipSize.width - 24,
   );
-  const angleDeg = (angleRad * 180) / Math.PI;
+  const anchorY = placeAbove ? tooltipTop + tooltipSize.height : tooltipTop;
 
-  const arrowLeft = tooltipBottomX - ARROW_SIZE / 2;
-  const arrowTop = tooltipBottomY + TOOLTIP_ARROW_GAP;
+  // Stop the line a little short of the target center so the arrowhead
+  // doesn't bury itself under the spotlight glow.
+  const dx = targetX - anchorX;
+  const dy = targetY - anchorY;
+  const dist = Math.max(Math.hypot(dx, dy), 1);
+  const stopShort = Math.min(bbox.width, bbox.height) * 0.28;
+  const lineEndX = targetX - (dx / dist) * stopShort;
+  const lineEndY = targetY - (dy / dist) * stopShort;
 
   return (
     <AnimatePresence>
@@ -79,63 +92,63 @@ export default function Onboarding({ active, bbox, showOrbHint, onDismiss }) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          {/* Spotlight — a quiet, breathing glow behind the resume.
-              mix-blend-screen + higher opacity so it actually reads
-              against the dark wallpaper instead of washing out. */}
+          {/* Spotlight — a glowing rounded rect that hugs the resume's
+              real bounding box directly, so there's no ambiguity about
+              what it's highlighting. Border + soft fill, screen-blended
+              so it reads clearly against the dark wallpaper. */}
           <motion.div
-            className="absolute rounded-[28%]"
+            className="absolute rounded-2xl"
             style={{
-              left: bbox.left - bbox.width * 0.4,
-              top: bbox.top - bbox.height * 0.4,
-              width: bbox.width * 1.8,
-              height: bbox.height * 1.8,
+              left: bbox.left - SPOTLIGHT_PADDING,
+              top: bbox.top - SPOTLIGHT_PADDING,
+              width: bbox.width + SPOTLIGHT_PADDING * 2,
+              height: bbox.height + SPOTLIGHT_PADDING * 2,
+              border: "1.5px solid rgba(170,205,255,0.55)",
               background:
-                "radial-gradient(closest-side, rgba(150,190,255,0.38), rgba(124,92,255,0.24) 45%, rgba(92,225,230,0.14) 66%, transparent 82%)",
+                "radial-gradient(closest-side, rgba(150,190,255,0.22), rgba(124,92,255,0.12) 60%, transparent 85%)",
+              boxShadow: "0 0 40px 8px rgba(124,92,255,0.25)",
               mixBlendMode: "screen",
             }}
-            animate={{ opacity: [0.65, 1, 0.65] }}
+            animate={{ opacity: [0.6, 1, 0.6] }}
             transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
           />
 
-          {/* Arrow — rotated to point from the tooltip's bottom edge
-              straight at the resume's actual on-screen center. Small and
-              singular, not a big tutorial-style pointer. */}
-          <motion.div
-            style={{
-              position: "absolute",
-              left: arrowLeft,
-              top: arrowTop,
-              width: ARROW_SIZE,
-              height: ARROW_SIZE,
-              transform: `rotate(${angleDeg - 45}deg)`,
-              transformOrigin: "50% 50%",
-            }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
+          {/* Connecting line — drawn fresh every render from the tooltip's
+              actual edge to the resume's actual center, so it always
+              visually links the two regardless of how far apart they end
+              up (unlike a fixed-size arrow icon, which can't span a large
+              or variable gap). */}
+          <svg
+            className="absolute inset-0 h-full w-full overflow-visible"
+            style={{ left: 0, top: 0 }}
           >
-            <motion.svg
-              width={ARROW_SIZE}
-              height={ARROW_SIZE}
-              viewBox="0 0 30 30"
-              animate={{ x: [0, 4, 0], y: [0, 4, 0] }}
-              transition={{
-                duration: 1.8,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-            >
-              <path
-                d="M6 6 L24 24 M24 24 L13 24 M24 24 L24 13"
-                stroke="rgba(170,210,255,0.95)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-                style={{ filter: "drop-shadow(0 0 6px rgba(92,225,230,0.6))" }}
-              />
-            </motion.svg>
-          </motion.div>
+            <defs>
+              <marker
+                id="onboarding-arrowhead"
+                markerWidth="8"
+                markerHeight="8"
+                refX="4"
+                refY="4"
+                orient="auto"
+              >
+                <path d="M0,0 L8,4 L0,8 Z" fill="rgba(170,210,255,0.95)" />
+              </marker>
+            </defs>
+            <motion.line
+              x1={anchorX}
+              y1={anchorY}
+              x2={lineEndX}
+              y2={lineEndY}
+              stroke="rgba(170,210,255,0.85)"
+              strokeWidth="2"
+              strokeDasharray="5 5"
+              markerEnd="url(#onboarding-arrowhead)"
+              style={{ filter: "drop-shadow(0 0 4px rgba(92,225,230,0.5))" }}
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.25, ease: "easeOut" }}
+            />
+          </svg>
 
           {/* Tooltip */}
           <motion.div
@@ -144,7 +157,7 @@ export default function Onboarding({ active, bbox, showOrbHint, onDismiss }) {
             style={{ left: tooltipLeft, top: tooltipTop, width: TOOLTIP_WIDTH }}
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
           >
             <p className="font-display text-[13px] font-semibold tracking-wide text-white">
               📄 Start Here
