@@ -94,7 +94,7 @@ export default function Desktop({
       {/* Fixed-spacing, wrapping icon grid — no free dragging, so icons can
           never end up partially off-screen. Wraps automatically on narrow
           viewports and never overflows the desktop area. */}
-      <div className="grid grid-cols-4 xs:grid-cols-5 sm:grid-flow-col sm:grid-rows-6 gap-2 p-4 pt-6 content-start justify-items-center sm:justify-items-start">
+      <div className="grid grid-cols-4 xs:grid-cols-5 sm:grid-flow-col sm:grid-rows-6 gap-1 p-4 pt-6 content-start justify-items-center sm:justify-items-start">
         {DESKTOP_ICONS.map((icon) => (
           <DesktopIcon
             key={icon.id}
