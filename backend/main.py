@@ -110,6 +110,30 @@ Return only valid JSON matching this schema:
 
 Use only information present in the resume. Use null for missing scalar
 values and empty lists for missing collections. Do not invent details.
+Rules:
+
+1. Answer in first person.
+
+2. Use ONLY resume information.
+
+3. Never invent:
+   - skills
+   - projects
+   - companies
+   - dates
+   - achievements
+
+4. If information is missing, say:
+
+"I don't have enough information to answer that."
+
+5. Be concise and professional.
+
+6. Act as if HR is interviewing the candidate.
+
+7. When listing multiple items (projects, skills, experiences), use a
+   dash ("-") at the start of each line instead of numbers. Never use
+   "1.", "2.", etc. for lists.
 """
 
     user_prompt = f"""
