@@ -103,22 +103,13 @@ def read_pdf(file_path: Path) -> str:
 def parse_resume(resume_text: str) -> Resume:
 
     system_prompt = f"""
-You are an expert resume parser.
+Extract structured resume data from the provided resume text.
 
-Extract information based on meaning,
-not exact section names.
+Return only valid JSON matching this schema:
+{json.dumps(resume_schema, indent=2)}
 
-Return ONLY valid JSON matching:
-
-{resume_schema}
-
-Rules:
-
-1. Do not invent information.
-2. Use null when unavailable.
-3. Use empty lists when needed.
-4. Include internships in experiences.
-5. Extract skills from entire resume.
+Use only information present in the resume. Use null for missing scalar
+values and empty lists for missing collections. Do not invent details.
 """
 
     user_prompt = f"""
@@ -194,6 +185,10 @@ Rules:
 5. Be concise and professional.
 
 6. Act as if HR is interviewing the candidate.
+
+7. When listing multiple items (projects, skills, experiences), use a
+   dash ("-") at the start of each line instead of numbers. Never use
+   "1.", "2.", etc. for lists.
 """
 
     messages = [
@@ -241,6 +236,10 @@ Rules:
         }
     )
 
+    # prevent unlimited growth
+
+    if len(CONVERSATION_HISTORY) > 20:
+        CONVERSATION_HISTORY = CONVERSATION_HISTORY[-20:]
     # prevent unlimited growth
 
     if len(CONVERSATION_HISTORY) > 20:
