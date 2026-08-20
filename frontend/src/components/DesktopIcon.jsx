@@ -22,8 +22,8 @@ export default function DesktopIcon({
     >
       {asset ? (
         <svg
-          width="52"
-          height="52"
+          width="44"
+          height="44"
           viewBox="0 0 128 128"
           className="drop-shadow-lg"
           aria-hidden="true"
@@ -32,7 +32,7 @@ export default function DesktopIcon({
         </svg>
       ) : (
         <Icon
-          size={32}
+          size={28}
           weight="duotone"
           className="text-accent-cyan drop-shadow-lg"
           aria-hidden="true"
